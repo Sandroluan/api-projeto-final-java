@@ -4,10 +4,12 @@
     const cors = require ('cors')
     const app = express()
     const port = process.env.PORT || 3000 //porta reserva
+    const userRoutes = require('./routes/userRoutes')
 
 
     app.use(express.json())
     app.use(cors())
+    app.use('/usuarios', userRoutes)
 
     app.get('/', (req, res)=>{
         connection.query('SELECT 1', (err,result)=>{
