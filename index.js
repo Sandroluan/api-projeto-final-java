@@ -5,11 +5,13 @@
     const app = express()
     const port = process.env.PORT || 3000 //porta reserva
     const userRoutes = require('./routes/userRoutes')
+    const bookRoutes = require('./routes/bookRoutes')
 
 
     app.use(express.json())
     app.use(cors())
     app.use('/usuarios', userRoutes)
+    app.use('/livros', bookRoutes)
 
     app.get('/', (req, res)=>{
         connection.query('SELECT 1', (err,result)=>{
