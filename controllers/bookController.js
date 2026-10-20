@@ -1,5 +1,4 @@
 const connection = require("../database/db");
-const { connect } = require("../routes/bookRoutes");
 
 const getBook = (req, res) => {
   connection.query("select * from tb_livros", (err, result) => {
