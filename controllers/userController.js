@@ -1,7 +1,12 @@
 const connection = require("../database/db");
 
 const getUsers = (req, res) => {
-  connection.query("select * from tb_users", (err, result) => {
+
+    const page = parseInt (req.query.page) || 1
+    const limit = 10
+    const offset = (page - 1) * limit
+
+  connection.query("select * from tb_users limit ? offset ?", [limit, offset], (err, result) => {
     if (err) {
       return res.status(500).json(err);
     }

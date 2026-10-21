@@ -3,12 +3,26 @@ const connection = require('../database/db')
 
 const getLoan = (req, res)=>{
 
-    const sql = `select *, 
+    const sql = `select
+    e.emprestimo_id, 
+    u.name as nome_usuario,
+    l.titulo as titulo_livro,
+    e.criado_em, 
+    e.prazo,
+    e.status,
     if(status = 'entregue', 0, greatest(0, datediff(current_date(), prazo))) as dias_de_atraso, 
     if(status = 'entregue', 0, greatest(0, datediff(current_date(), prazo))) * 2 as valor_multa 
-    from tb_emprestimos`
+    from tb_emprestimos e
+    inner join tb_users u on e.user_id = u.user_id
+    inner join tb_livros l on e.livro_id = l.livro_id
+    limit ? offset ?
+    `
 
-    connection.query(sql,(err, result)=>{
+    const page = parseInt (req.query.page) || 1
+    const limit = 10
+    const offset = (page - 1) * limit
+
+    connection.query(sql,[limit, offset],(err, result)=>{
         if(err){
             return res.status(500).json(err)
         }
@@ -20,7 +34,35 @@ const getLoan = (req, res)=>{
 
 const getOverdueLoan = (req, res)=>{
 
-    connection.query(`select * from tb_emprestimos where status != 'entregue' and datediff(current_date(), prazo) > 0`, (err, result)=>{
+    const page = parseInt (req.query.page) || 1
+    const limit = 10
+    const offset = (page - 1) * limit
+
+    const sql = `
+    select
+    e.emprestimo_id, 
+    u.name as nome_usuario,
+    l.titulo as titulo_livro,
+    e.criado_em, 
+    e.prazo,
+    e.status,
+
+    datediff(current_date(), e.prazo) AS dias_de_atraso,
+    datediff(current_date(), e.prazo) * 2 AS valor_multa
+
+    from tb_emprestimos e
+
+    inner join tb_users u on e.user_id = u.user_id
+    inner join tb_livros l on e.livro_id = l.livro_id
+    
+    where e.status != 'entregue' 
+    and 
+    datediff(current_date(), e.prazo) > 0
+    limit ? offset ?
+    `
+
+
+    connection.query(sql, [limit, offset], (err, result)=>{
         if (err){
             return res.status(500).json(err)
         }
