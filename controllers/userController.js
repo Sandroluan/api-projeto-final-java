@@ -1,4 +1,51 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken')
 const connection = require("../database/db");
+
+const userLogin = (req, res)=>{
+    const {email, senha} = req.body
+
+    if(!email || !senha){
+        return res.status(400).json({message:'missing info'})
+    }
+
+    const sql = `SELECT user_id, email, senha, tipo FROM tb_users WHERE email = ?`
+
+    connection.query(sql, [email], (err,result)=>{
+        if(err){
+            return res.status(500).json(err)
+        }if(result.length === 0){
+            return res.status(400).json ({message:'no found user'})
+        }
+        bcrypt.compare(senha, result[0].senha, (err, isMatch)=>{
+          if(err){
+            return res.status(500).json(err)
+          }if(!isMatch){
+            return res.status(401).json({message:'email or password wrong'}) 
+          }if(isMatch){
+            const user = result[0]
+            delete user.senha //remove a senha do json por seguranca 
+
+            const SECRET_KEY = process.env.JWT_SECRET
+
+            const token = jwt.sign(
+              {
+                user_id: user.user_id, email: user.email, tipo: user.tipo
+              }, SECRET_KEY, 
+              {expiresIn: '1d'}
+            )
+
+            return res.status(200).json({
+              message:'login realizado',
+              user,
+              token
+            })
+          }
+        })
+    })
+
+}
+
 
 const getUsers = (req, res) => {
 
@@ -24,13 +71,20 @@ const getUserId = (req , res)=>{
 }
 
 const createUser = (req, res) => {
-  const { name, email, cpf, dt_nasc } = req.body;
-  if (!name || !email || !cpf || !dt_nasc) {
+  const { name, email, senha, tipo, cpf, dt_nasc } = req.body;
+  if (!name || !email || !senha || !cpf || !dt_nasc) {
     return res.status(400).json({ message: "missing info" });
   }
-  connection.query(
-    "insert into tb_users (name, email, cpf, dt_nasc) values (?,?,?,?)",
-    [name, email, cpf, dt_nasc],
+
+  const userRole = tipo || 'cliente'
+
+  bcrypt.hash(senha, 10, (err, hash) => {
+    if (err) {
+      return res.status(500).json(err);
+    }
+    connection.query(
+    "insert into tb_users (name, email, senha, tipo, cpf, dt_nasc) values (?,?,?,?,?,?)",
+    [name, email, hash, userRole, cpf, dt_nasc],
     (err, result) => {
       if (err) {
         return res.status(500).json(err);
@@ -38,6 +92,8 @@ const createUser = (req, res) => {
       return res.status(200).json({ message: "created user", result });
     },
   );
+  })
+
 };
 
 const updateUser = (req, res) => {
@@ -96,6 +152,7 @@ const deleteUser = (req , res)=>{
 
 
 module.exports = {
+  userLogin,
   getUsers,
   getUserId,
   createUser,
